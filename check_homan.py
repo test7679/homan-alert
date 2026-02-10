@@ -1,6 +1,12 @@
 from playwright.sync_api import sync_playwright
 import telegram
 
+from telegram import Bot
+Bot("8590808423:AAGfPUTWclH-pW-dM1H3ubk4Lu_SJMQnG8k").send_message(
+    chat_id="8532019043",
+    text="✅ TEST: TTD GitHub Action is running"
+)
+
 BOT_TOKEN = "8590808423:AAGfPUTWclH-pW-dM1H3ubk4Lu_SJMQnG8k"
 CHAT_ID = "8532019043"
 
