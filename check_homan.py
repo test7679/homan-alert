@@ -46,8 +46,6 @@ def check_divyanugraha_homam():
 
 if __name__ == "__main__":
     try:
-        # 🔹 TEMPORARY TEST (REMOVE AFTER 1 SUCCESSFUL RUN)
-        send_alert("✅ TEST: GitHub Actions → Telegram is working")
 
         check_divyanugraha_homam()
 
