@@ -2,14 +2,10 @@ import os
 import requests
 from playwright.sync_api import sync_playwright
 
-# ===============================
-# READ FROM GITHUB SECRETS
-# ===============================
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = os.environ.get("CHAT_ID")
 
-if not BOT_TOKEN or not CHAT_ID:
-    raise RuntimeError("BOT_TOKEN or CHAT_ID not found in environment variables")
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
+
 
 def send_alert(message: str):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -17,7 +13,8 @@ def send_alert(message: str):
         "chat_id": CHAT_ID,
         "text": message
     }
-    response = requests.post(url, data=payload, timeout=30)
+
+    response = requests.post(url, json=payload, timeout=20)
     response.raise_for_status()
 
 
@@ -26,36 +23,34 @@ def check_divyanugraha_homam():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        print("Opening TTD website...")
-
         page.goto(
             "https://ttdevasthanams.ap.gov.in/arjitha-seva/slot-booking",
-            timeout=90_000
+            timeout=60000
         )
 
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(5000)
+        page.wait_for_selector("text=Seva Slots", timeout=60000)
 
-        page_text = page.content().lower()
+        available_slots = page.locator("button.available, div.available")
 
-        if "divyanugraha" in page_text:
-            send_alert(
-                "🙏🙏🙏 TTD ALERT 🙏🙏🙏\n\n"
-                "Divyanugraha Homam page has an update.\n"
-                "Please check immediately:\n"
-                "https://ttdevasthanams.ap.gov.in/arjitha-seva/slot-booking"
-            )
+        if available_slots.count() > 0:
+            for i in range(available_slots.count()):
+                date_text = available_slots.nth(i).inner_text()
+                send_alert(
+                    f"🙏 Divyaanugraha Homam AVAILABLE on {date_text}\nBook immediately!"
+                )
         else:
-            print("No update today.")
+            print("No slots available")
 
         browser.close()
 
 
 if __name__ == "__main__":
     try:
+        # 🔹 TEMPORARY TEST (REMOVE AFTER 1 SUCCESSFUL RUN)
         send_alert("✅ TEST: GitHub Actions → Telegram is working")
 
         check_divyanugraha_homam()
+
     except Exception as e:
         send_alert(f"❌ TTD BOT ERROR:\n{str(e)}")
         raise
