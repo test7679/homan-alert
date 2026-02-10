@@ -1,38 +1,59 @@
+import os
+import requests
 from playwright.sync_api import sync_playwright
-import telegram
 
-from telegram import Bot
-Bot("8590808423:AAGfPUTWclH-pW-dM1H3ubk4Lu_SJMQnG8k").send_message(
-    chat_id="8532019043",
-    text="✅ TEST: TTD GitHub Action is running"
-)
+# ===============================
+# READ FROM GITHUB SECRETS
+# ===============================
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
 
-BOT_TOKEN = "8590808423:AAGfPUTWclH-pW-dM1H3ubk4Lu_SJMQnG8k"
-CHAT_ID = "8532019043"
+if not BOT_TOKEN or not CHAT_ID:
+    raise RuntimeError("BOT_TOKEN or CHAT_ID not found in environment variables")
 
-def send_alert(date_text):
-    bot = telegram.Bot(token=BOT_TOKEN)
-    bot.send_message(
-        chat_id=CHAT_ID,
-        text=f"🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏🙏 Divyaanugraha Homam AVAILABLE on {date_text}. Book immediately!"
-    )
+def send_alert(message: str):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message
+    }
+    response = requests.post(url, data=payload, timeout=30)
+    response.raise_for_status()
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
 
-    page.goto(
-        "https://ttdevasthanams.ap.gov.in/arjitha-seva/slot-booking",
-        timeout=60000
-    )
+def check_divyanugraha_homam():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    page.wait_for_selector("text=Seva Slots", timeout=60000)
+        print("Opening TTD website...")
 
-    available_slots = page.locator("button.available, div.available")
+        page.goto(
+            "https://ttdevasthanams.ap.gov.in/arjitha-seva/slot-booking",
+            timeout=90_000
+        )
 
-    if available_slots.count() > 0:
-        for i in range(available_slots.count()):
-            date = available_slots.nth(i).inner_text()
-            send_alert(date)
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(5000)
 
-    browser.close()
+        page_text = page.content().lower()
+
+        if "divyanugraha" in page_text:
+            send_alert(
+                "🙏🙏🙏 TTD ALERT 🙏🙏🙏\n\n"
+                "Divyanugraha Homam page has an update.\n"
+                "Please check immediately:\n"
+                "https://ttdevasthanams.ap.gov.in/arjitha-seva/slot-booking"
+            )
+        else:
+            print("No update today.")
+
+        browser.close()
+
+
+if __name__ == "__main__":
+    try:
+        check_divyanugraha_homam()
+    except Exception as e:
+        send_alert(f"❌ TTD BOT ERROR:\n{str(e)}")
+        raise
