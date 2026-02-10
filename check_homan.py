@@ -53,6 +53,8 @@ def check_divyanugraha_homam():
 
 if __name__ == "__main__":
     try:
+        send_alert("✅ TEST: GitHub Actions → Telegram is working")
+
         check_divyanugraha_homam()
     except Exception as e:
         send_alert(f"❌ TTD BOT ERROR:\n{str(e)}")
